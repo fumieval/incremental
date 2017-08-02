@@ -106,6 +106,16 @@ instance Eq a => Incremental (Hetero a) where
     | a /= b = Just b
     | otherwise = Nothing
 
+newtype Fresh a = Fresh { getFresh :: a }
+  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
+      , Real, RealFrac, RealFloat)
+
+-- | Always updated
+instance Incremental (Fresh a) where
+  type Delta (Fresh a) = a
+  patch _ = Fresh
+  diff _ = Just . getFresh
+
 #define TRIVIAL_EQ(ty) instance Incremental ty where { \
   type Delta ty = ty; \
   patch _ x = x; \
