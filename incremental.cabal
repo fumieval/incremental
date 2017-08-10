@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Incremental
-  build-depends:       base, containers, semigroups
+  build-depends:       base, containers, semigroups, deepseq
   ghc-options: -Wall
   default-language:    Haskell2010
 

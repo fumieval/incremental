@@ -12,6 +12,7 @@ module Data.Incremental (
   , Fresh(..)
 ) where
 
+import Control.DeepSeq
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -41,6 +42,9 @@ instance Incremental Void where
 
 data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
   deriving Generic
+
+instance (Show a, Show (Delta a)) => Show (Alter a)
+instance (NFData a, NFData (Delta a)) => NFData (Alter a)
 
 instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
   _ <> Insert a = Insert a
@@ -105,7 +109,7 @@ instance Num a => Incremental (Sum a) where
 
 newtype Hetero a = Hetero { getHetero :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat)
+      , Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | 'diff' checks equality
 instance Eq a => Incremental (Hetero a) where
@@ -117,7 +121,7 @@ instance Eq a => Incremental (Hetero a) where
 
 newtype Fresh a = Fresh { getFresh :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat)
+      , Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | Always updated
 instance Incremental (Fresh a) where
