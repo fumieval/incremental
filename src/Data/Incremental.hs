@@ -3,13 +3,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 module Data.Incremental (
   Incremental(..)
   , Alter(..)
   , Hetero(..)
+  , Fresh(..)
 ) where
 
+import Control.DeepSeq
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -18,6 +21,7 @@ import Data.Void
 import Data.Int
 import Data.Word
 import Numeric.Natural
+import GHC.Generics
 
 class Incremental a where
   -- | the difference type
@@ -37,7 +41,11 @@ instance Incremental Void where
   patch v _ = v
   diff _ _ = Nothing
 
-data Alter a = Insert a | Update (Delta a) | Delete
+data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
+  deriving Generic
+
+instance (Show a, Show (Delta a)) => Show (Alter a)
+instance (NFData a, NFData (Delta a)) => NFData (Alter a)
 
 instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
   _ <> Insert a = Insert a
@@ -45,6 +53,7 @@ instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
   Insert a <> Update d = Insert (patch a d)
   Update c <> Update d = Update (c <> d)
   Delete <> Update _ = Delete
+  Upsert a d <> Update e = Upsert a (d <> e)
 
 instance (Incremental a, Semigroup (Delta a), Monoid (Delta a)) => Monoid (Alter a) where
   mempty = Update mempty
@@ -54,6 +63,8 @@ instance Incremental a => Incremental (Maybe a) where
   type Delta (Maybe a) = Alter a
   patch _ (Insert a) = Just a
   patch (Just a) (Update d) = Just $! patch a d
+  patch (Just a) (Upsert _ d) = Just $! patch a d
+  patch _ (Upsert a _) = Just a
   patch _ _ = Nothing
   diff Nothing (Just a) = Just $ Insert a
   diff (Just a) (Just b) = Update <$> diff a b
@@ -75,6 +86,7 @@ instance (Incremental a) => Incremental (IntMap.IntMap a) where
   patch = IntMap.mergeWithKey (\_ a -> patch (Just a)) id
     $ IntMap.mapMaybe $ \case
       Insert a -> Just a
+      Upsert a _ -> Just a
       _ -> Nothing
   diff = (check.). IntMap.mergeWithKey (\_ a b -> Update <$> diff a b) (IntMap.map (const Delete)) (IntMap.map Insert)
     where
@@ -85,6 +97,7 @@ instance (Ord k, Incremental a) => Incremental (Map.Map k a) where
   patch = Map.mergeWithKey (\_ a -> patch (Just a)) id
     $ Map.mapMaybe $ \case
       Insert a -> Just a
+      Upsert a _ -> Just a
       _ -> Nothing
   diff = (check.). Map.mergeWithKey (\_ a b -> Update <$> diff a b) (Map.map (const Delete)) (Map.map Insert)
     where
@@ -111,7 +124,7 @@ instance Num a => Incremental (Sum a) where
 
 newtype Hetero a = Hetero { getHetero :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat)
+      , Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | 'diff' checks equality
 instance Eq a => Incremental (Hetero a) where
@@ -123,7 +136,7 @@ instance Eq a => Incremental (Hetero a) where
 
 newtype Fresh a = Fresh { getFresh :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat)
+      , Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | Always updated
 instance Incremental (Fresh a) where
