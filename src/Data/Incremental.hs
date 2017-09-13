@@ -13,6 +13,7 @@ module Data.Incremental (
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Void
 import Data.Int
 import Data.Word
@@ -88,6 +89,20 @@ instance (Ord k, Incremental a) => Incremental (Map.Map k a) where
   diff = (check.). Map.mergeWithKey (\_ a b -> Update <$> diff a b) (Map.map (const Delete)) (Map.map Insert)
     where
       check m = if Map.null m then Nothing else Just m
+
+instance Ord a => Incremental (Set.Set a) where
+  -- | (insertion, deletion)
+  type Delta (Set.Set a) = (Set.Set a, Set.Set a)
+  patch s (ins, del) = s `Set.difference` del `Set.union` ins
+  diff a b = check $ go (Set.toAscList a) (Set.toAscList b) Set.empty Set.empty where
+    go xs'@(x:xs) ys'@(y:ys) s t = case compare x y of
+      LT -> go xs ys' s (Set.insert x t)
+      EQ -> go xs ys s t
+      GT -> go xs' ys (Set.insert y s) t
+    go xs ys s t = (foldr Set.insert s ys, foldr Set.insert t xs)
+    check r@(s, t)
+      | Set.null s, Set.null t = Nothing
+      | otherwise = Just r
 
 instance Num a => Incremental (Sum a) where
   type Delta (Sum a) = Sum a
