@@ -123,8 +123,8 @@ instance Num a => Incremental (Sum a) where
   diff (Sum a) (Sum b) = Just $ Sum (b - a)
 
 newtype Hetero a = Hetero { getHetero :: a }
-  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat, Generic, NFData)
+  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | 'diff' checks equality
 instance Eq a => Incremental (Hetero a) where
@@ -135,8 +135,8 @@ instance Eq a => Incremental (Hetero a) where
     | otherwise = Nothing
 
 newtype Fresh a = Fresh { getFresh :: a }
-  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat, Generic, NFData)
+  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | Always updated
 instance Incremental (Fresh a) where
