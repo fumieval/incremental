@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Data.Incremental (
   Incremental(..)
   , Alter(..)
@@ -44,7 +45,7 @@ instance Incremental Void where
 data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
   deriving Generic
 
-instance (Show a, Show (Delta a)) => Show (Alter a)
+deriving instance (Show a, Show (Delta a)) => Show (Alter a)
 instance (NFData a, NFData (Delta a)) => NFData (Alter a)
 
 instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
