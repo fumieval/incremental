@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Data.Incremental (
   Incremental(..)
   , Alter(..)
@@ -44,7 +45,7 @@ instance Incremental Void where
 data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
   deriving Generic
 
-instance (Show a, Show (Delta a)) => Show (Alter a)
+deriving instance (Show a, Show (Delta a)) => Show (Alter a)
 instance (NFData a, NFData (Delta a)) => NFData (Alter a)
 
 instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
@@ -123,8 +124,8 @@ instance Num a => Incremental (Sum a) where
   diff (Sum a) (Sum b) = Just $ Sum (b - a)
 
 newtype Hetero a = Hetero { getHetero :: a }
-  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat, Generic, NFData)
+  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | 'diff' checks equality
 instance Eq a => Incremental (Hetero a) where
@@ -135,8 +136,8 @@ instance Eq a => Incremental (Hetero a) where
     | otherwise = Nothing
 
 newtype Fresh a = Fresh { getFresh :: a }
-  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Monoid, Num, Ord
-      , Real, RealFrac, RealFloat, Generic, NFData)
+  deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
 
 -- | Always updated
 instance Incremental (Fresh a) where
