@@ -52,9 +52,13 @@ instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
   _ <> Insert a = Insert a
   _ <> Delete = Delete
   Insert a <> Update d = Insert (patch a d)
+  Insert a <> Upsert _ d = Insert (patch a d)
   Update c <> Update d = Update (c <> d)
+  Update c <> Upsert a d = Upsert a (c <> d)
   Delete <> Update _ = Delete
+  Delete <> Upsert a _ = Insert a
   Upsert a d <> Update e = Upsert a (d <> e)
+  Upsert a d <> Upsert _ e = Upsert a (d <> e)
 
 instance (Incremental a, Semigroup (Delta a), Monoid (Delta a)) => Monoid (Alter a) where
   mempty = Update mempty
