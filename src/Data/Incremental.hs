@@ -13,10 +13,14 @@ module Data.Incremental (
   , Fresh(..)
 ) where
 
+import Control.Applicative
 import Control.DeepSeq
+import Data.Fixed
+import Data.Functor.Identity
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Set as Set
 import Data.Void
 import Data.Int
@@ -41,6 +45,21 @@ instance Incremental Void where
   type Delta Void = Void
   patch v _ = v
   diff _ _ = Nothing
+
+instance Incremental (Proxy a) where
+  type Delta (Proxy a) = Void
+  patch v _ = v
+  diff _ _ = Nothing
+
+instance Incremental a => Incremental (Identity a) where
+  type Delta (Identity a) = Delta a
+  patch (Identity a) d = Identity (patch a d)
+  diff (Identity a) (Identity b) = diff a b
+
+instance Incremental a => Incremental (Const a b) where
+  type Delta (Const a b) = Delta a
+  patch (Const a) d = Const (patch a d)
+  diff (Const a) (Const b) = diff a b
 
 data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
   deriving Generic
@@ -149,8 +168,8 @@ instance Incremental (Fresh a) where
   patch _ = Fresh
   diff _ = Just . getFresh
 
-#define TRIVIAL_EQ(ty) instance Incremental ty where { \
-  type Delta ty = ty; \
+#define TRIVIAL_EQ(ty) instance Incremental (ty) where { \
+  type Delta (ty) = ty; \
   patch _ x = x; \
   diff a b = if a /= b then Just b else Nothing; \
   }
@@ -159,6 +178,7 @@ TRIVIAL_EQ(Bool)
 TRIVIAL_EQ(Char)
 TRIVIAL_EQ(Double)
 TRIVIAL_EQ(Float)
+TRIVIAL_EQ(Fixed a)
 TRIVIAL_EQ(Int)
 TRIVIAL_EQ(Int8)
 TRIVIAL_EQ(Int16)

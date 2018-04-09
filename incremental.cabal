@@ -1,7 +1,7 @@
 name:                incremental
 version:             0
 synopsis:            incremental update library
--- description:
+description:         Generic interface for incremental updates
 homepage:            https://github.com/fumieval/incremental#readme
 license:             BSD3
 license-file:        LICENSE
