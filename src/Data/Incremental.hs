@@ -6,6 +6,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 module Data.Incremental (
   Incremental(..)
   , Alter(..)
@@ -20,11 +22,13 @@ import Data.Functor.Identity
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Maybe
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Void
 import Data.Int
 import Data.Word
+import Data.Extensible
 import Numeric.Natural
 import GHC.Generics
 
@@ -173,6 +177,22 @@ instance Incremental (Fresh a) where
   patch _ x = x; \
   diff a b = if a /= b then Just b else Nothing; \
   }
+
+newtype WrapDelta h x = WrapDelta { unwrapDelta :: Maybe (Delta (h x)) }
+
+deriving instance Incremental (h (AssocValue kv)) => Incremental (Field h kv)
+
+instance WrapForall Incremental h xs => Incremental (h :* xs) where
+  type Delta (h :* xs) = WrapDelta h :* xs
+  patch r = hmapWithIndexFor (Proxy :: Proxy (Instance1 Incremental h))
+    (\i (WrapDelta d) -> maybe (hlookup i r) (patch (hlookup i r)) d)
+  diff r = check
+    . hmapWithIndexFor (Proxy :: Proxy (Instance1 Incremental h))
+    (\i x -> WrapDelta (diff (hlookup i r) x))
+    where
+      check t
+        | getAny $ hfoldMap (Any . isJust . unwrapDelta) t = Just t
+        | otherwise = Nothing
 
 TRIVIAL_EQ(Bool)
 TRIVIAL_EQ(Char)
