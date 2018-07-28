@@ -8,11 +8,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE PolyKinds #-}
 module Data.Incremental (
   Incremental(..)
   , Alter(..)
   , Hetero(..)
   , Fresh(..)
+  , WrapDelta(..)
 ) where
 
 import Control.Applicative
@@ -179,6 +181,9 @@ instance Incremental (Fresh a) where
   }
 
 newtype WrapDelta h x = WrapDelta { unwrapDelta :: Maybe (Delta (h x)) }
+deriving instance Show (Delta (h x)) => Show (WrapDelta h x)
+deriving instance Eq (Delta (h x)) => Eq (WrapDelta h x)
+deriving instance Ord (Delta (h x)) => Ord (WrapDelta h x)
 
 deriving instance Incremental (h (AssocValue kv)) => Incremental (Field h kv)
 
