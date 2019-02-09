@@ -16,7 +16,10 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Incremental
-  build-depends:       base >= 4.8 && <5, containers, semigroups, deepseq, extensible
+  build-depends:       base >= 4.8 && <5, containers, semigroups, deepseq
+    , extensible
+    , aeson
+    , text
   ghc-options: -Wall
   default-language:    Haskell2010
 

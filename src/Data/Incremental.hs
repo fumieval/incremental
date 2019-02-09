@@ -3,6 +3,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,6 +20,7 @@ module Data.Incremental (
 
 import Control.Applicative
 import Control.DeepSeq
+import qualified Data.Aeson as J
 import Data.Fixed
 import Data.Functor.Identity
 import Data.Semigroup hiding (diff)
@@ -31,6 +33,7 @@ import Data.Void
 import Data.Int
 import Data.Word
 import Data.Extensible
+import Data.Text (Text)
 import Numeric.Natural
 import GHC.Generics
 
@@ -67,13 +70,16 @@ instance Incremental a => Incremental (Const a b) where
   patch (Const a) d = Const (patch a d)
   diff (Const a) (Const b) = diff a b
 
-data Alter a = Insert a | Update (Delta a) | Delete | Upsert a (Delta a)
-  deriving Generic
+data Alter a d = Insert a | Update d | Delete | Upsert a d
+  deriving (Generic, Functor)
 
-deriving instance (Show a, Show (Delta a)) => Show (Alter a)
-instance (NFData a, NFData (Delta a)) => NFData (Alter a)
+deriving instance (Show a, Show d) => Show (Alter a d)
+instance (NFData a, NFData d) => NFData (Alter a d)
 
-instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
+instance (J.FromJSON a, J.FromJSON d) => J.FromJSON (Alter a d)
+instance (J.ToJSON a, J.ToJSON d) => J.ToJSON (Alter a d)
+
+instance (Incremental a, d ~ Delta a, Semigroup d) => Semigroup (Alter a d) where
   _ <> Insert a = Insert a
   _ <> Delete = Delete
   Insert a <> Update d = Insert (patch a d)
@@ -85,12 +91,12 @@ instance (Incremental a, Semigroup (Delta a)) => Semigroup (Alter a) where
   Upsert a d <> Update e = Upsert a (d <> e)
   Upsert a d <> Upsert _ e = Upsert a (d <> e)
 
-instance (Incremental a, Semigroup (Delta a), Monoid (Delta a)) => Monoid (Alter a) where
+instance (Incremental a, Monoid d, d ~ Delta a) => Monoid (Alter a d) where
   mempty = Update mempty
   mappend = (<>)
 
 instance Incremental a => Incremental (Maybe a) where
-  type Delta (Maybe a) = Alter a
+  type Delta (Maybe a) = Alter a (Delta a)
   patch _ (Insert a) = Just a
   patch (Just a) (Update d) = Just $! patch a d
   patch (Just a) (Upsert _ d) = Just $! patch a d
@@ -112,7 +118,7 @@ instance (Incremental a, Incremental b, Incremental c) => Incremental (a, b, c) 
   diff (a, b, c) (d, e, f) = Just (diff a d, diff b e, diff c f)
 
 instance (Incremental a) => Incremental (IntMap.IntMap a) where
-  type Delta (IntMap.IntMap a) = IntMap.IntMap (Alter a)
+  type Delta (IntMap.IntMap a) = IntMap.IntMap (Alter a (Delta a))
   patch = IntMap.mergeWithKey (\_ a -> patch (Just a)) id
     $ IntMap.mapMaybe $ \case
       Insert a -> Just a
@@ -123,7 +129,7 @@ instance (Incremental a) => Incremental (IntMap.IntMap a) where
       check m = if IntMap.null m then Nothing else Just m
 
 instance (Ord k, Incremental a) => Incremental (Map.Map k a) where
-  type Delta (Map.Map k a) = Map.Map k (Alter a)
+  type Delta (Map.Map k a) = Map.Map k (Alter a (Delta a))
   patch = Map.mergeWithKey (\_ a -> patch (Just a)) id
     $ Map.mapMaybe $ \case
       Insert a -> Just a
@@ -151,6 +157,13 @@ instance Num a => Incremental (Sum a) where
   type Delta (Sum a) = Sum a
   patch = (<>)
   diff (Sum a) (Sum b) = Just $ Sum (b - a)
+
+instance Eq a => Incremental [a] where
+  type Delta [a] = [a]
+  patch _ xs = xs
+  diff a b
+    | a == b = Nothing
+    | otherwise = Just b
 
 newtype Hetero a = Hetero { getHetero :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
@@ -184,6 +197,8 @@ newtype WrapDelta h x = WrapDelta { unwrapDelta :: Maybe (Delta (h x)) }
 deriving instance Show (Delta (h x)) => Show (WrapDelta h x)
 deriving instance Eq (Delta (h x)) => Eq (WrapDelta h x)
 deriving instance Ord (Delta (h x)) => Ord (WrapDelta h x)
+deriving instance J.FromJSON (Delta (h x)) => J.FromJSON (WrapDelta h x)
+deriving instance J.ToJSON (Delta (h x)) => J.ToJSON (WrapDelta h x)
 
 deriving instance Incremental (h (AssocValue kv)) => Incremental (Field h kv)
 
@@ -217,3 +232,4 @@ TRIVIAL_EQ(Word8)
 TRIVIAL_EQ(Word16)
 TRIVIAL_EQ(Word32)
 TRIVIAL_EQ(Word64)
+TRIVIAL_EQ(Text)
