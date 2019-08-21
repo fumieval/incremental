@@ -202,10 +202,10 @@ deriving instance Ord (Delta (h x)) => Ord (WrapDelta h x)
 deriving instance J.FromJSON (Delta (h x)) => J.FromJSON (WrapDelta h x)
 deriving instance J.ToJSON (Delta (h x)) => J.ToJSON (WrapDelta h x)
 
-deriving instance Incremental (h (AssocValue kv)) => Incremental (Field h kv)
+deriving instance Incremental (h (TargetOf kv)) => Incremental (Field h kv)
 
-instance WrapForall Incremental h xs => Incremental (h :* xs) where
-  type Delta (h :* xs) = WrapDelta h :* xs
+instance WrapForall Incremental h xs => Incremental (xs :& h) where
+  type Delta (xs :& h) = xs :& WrapDelta h
   patch r = hmapWithIndexFor (Proxy :: Proxy (Instance1 Incremental h))
     (\i (WrapDelta d) -> maybe (hlookup i r) (patch (hlookup i r)) d)
   diff r = check
