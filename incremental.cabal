@@ -1,5 +1,5 @@
 name:                incremental
-version:             0
+version:             0.1
 synopsis:            incremental update library
 description:         Generic interface for incremental updates
 homepage:            https://github.com/fumieval/incremental#readme
