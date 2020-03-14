@@ -12,6 +12,7 @@ cabal.config
 .stack-work
 .bash_history
 dist-newstyle
+.ghc.environment.*
 
 # =========================
 # Operating System Files
