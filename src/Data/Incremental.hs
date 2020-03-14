@@ -17,24 +17,22 @@ module Data.Incremental (
   , Alter(..)
   , Hetero(..)
   , Fresh(..)
-  , WrapDelta(..)
 ) where
 
 import Control.Applicative
 import Control.DeepSeq
 import qualified Data.Aeson as J
+import Data.ByteString (ByteString)
 import Data.Fixed
 import Data.Functor.Identity
 import Data.Semigroup hiding (diff)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
-import Data.Maybe
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Void
 import Data.Int
 import Data.Word
-import Data.Extensible
 import Data.Text (Text)
 import Numeric.Natural
 import GHC.Generics
@@ -195,27 +193,6 @@ instance Incremental (Fresh a) where
   diff a b = if a /= b then Just b else Nothing; \
   }
 
-newtype WrapDelta h x = WrapDelta { unwrapDelta :: Maybe (Delta (h x)) }
-deriving instance Show (Delta (h x)) => Show (WrapDelta h x)
-deriving instance Eq (Delta (h x)) => Eq (WrapDelta h x)
-deriving instance Ord (Delta (h x)) => Ord (WrapDelta h x)
-deriving instance J.FromJSON (Delta (h x)) => J.FromJSON (WrapDelta h x)
-deriving instance J.ToJSON (Delta (h x)) => J.ToJSON (WrapDelta h x)
-
-deriving instance Incremental (h (TargetOf kv)) => Incremental (Field h kv)
-
-instance WrapForall Incremental h xs => Incremental (xs :& h) where
-  type Delta (xs :& h) = xs :& WrapDelta h
-  patch r = hmapWithIndexFor (Proxy :: Proxy (Instance1 Incremental h))
-    (\i (WrapDelta d) -> maybe (hlookup i r) (patch (hlookup i r)) d)
-  diff r = check
-    . hmapWithIndexFor (Proxy :: Proxy (Instance1 Incremental h))
-    (\i x -> WrapDelta (diff (hlookup i r) x))
-    where
-      check t
-        | getAny $ hfoldMap (Any . isJust . unwrapDelta) t = Just t
-        | otherwise = Nothing
-
 TRIVIAL_EQ(Bool)
 TRIVIAL_EQ(Char)
 TRIVIAL_EQ(Double)
@@ -235,3 +212,4 @@ TRIVIAL_EQ(Word16)
 TRIVIAL_EQ(Word32)
 TRIVIAL_EQ(Word64)
 TRIVIAL_EQ(Text)
+TRIVIAL_EQ(ByteString)
