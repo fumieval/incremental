@@ -88,7 +88,7 @@ instance (Incremental a, d ~ Delta a, Semigroup d) => Semigroup (Alter a d) wher
   Update c <> Upsert a d = Upsert a (c <> d)
   Delete <> Update _ = Delete
   Delete <> Upsert a _ = Insert a
-  Upsert a d <> Update e = Upsert a (d <> e)
+  Upsert a d <> Update e = Upsert (patch a e) (d <> e)
   Upsert a d <> Upsert _ e = Upsert a (d <> e)
 
 instance (Incremental a, Monoid d, d ~ Delta a) => Monoid (Alter a d) where
