@@ -70,7 +70,10 @@ instance Incremental a => Incremental (Const a b) where
   patch (Const a) d = Const (patch a d)
   diff (Const a) (Const b) = diff a b
 
-data Alter a d = Insert a | Update d | Delete | Upsert a d
+data Alter a d = Insert a
+  | Update d
+  | Delete a -- ^ last value
+  | Upsert a d
   deriving (Generic, Functor)
 
 deriving instance (Show a, Show d) => Show (Alter a d)
@@ -81,13 +84,13 @@ instance (J.ToJSON a, J.ToJSON d) => J.ToJSON (Alter a d)
 
 instance (Incremental a, d ~ Delta a, Semigroup d) => Semigroup (Alter a d) where
   _ <> Insert a = Insert a
-  _ <> Delete = Delete
+  _ <> Delete a = Delete a
   Insert a <> Update d = Insert (patch a d)
   Insert a <> Upsert _ d = Insert (patch a d)
   Update c <> Update d = Update (c <> d)
   Update c <> Upsert a d = Upsert a (c <> d)
-  Delete <> Update _ = Delete
-  Delete <> Upsert a _ = Insert a
+  Delete a <> Update _ = Delete a
+  Delete _ <> Upsert a _ = Insert a
   Upsert a d <> Update e = Upsert (patch a e) (d <> e)
   Upsert a d <> Upsert _ e = Upsert a (d <> e)
 
@@ -104,7 +107,7 @@ instance Incremental a => Incremental (Maybe a) where
   patch _ _ = Nothing
   diff Nothing (Just a) = Just $ Insert a
   diff (Just a) (Just b) = Update <$> diff a b
-  diff (Just _) Nothing = Just Delete
+  diff (Just a) Nothing = Just (Delete a)
   diff _ _ = Nothing
 
 instance (Incremental a, Incremental b) => Incremental (a, b) where
@@ -124,7 +127,7 @@ instance (Incremental a) => Incremental (IntMap.IntMap a) where
       Insert a -> Just a
       Upsert a _ -> Just a
       _ -> Nothing
-  diff = (check.). IntMap.mergeWithKey (\_ a b -> Update <$> diff a b) (IntMap.map (const Delete)) (IntMap.map Insert)
+  diff = (check.). IntMap.mergeWithKey (\_ a b -> Update <$> diff a b) (IntMap.map Delete) (IntMap.map Insert)
     where
       check m = if IntMap.null m then Nothing else Just m
 
@@ -135,7 +138,7 @@ instance (Ord k, Incremental a) => Incremental (Map.Map k a) where
       Insert a -> Just a
       Upsert a _ -> Just a
       _ -> Nothing
-  diff = (check.). Map.mergeWithKey (\_ a b -> Update <$> diff a b) (Map.map (const Delete)) (Map.map Insert)
+  diff = (check.). Map.mergeWithKey (\_ a b -> Update <$> diff a b) (Map.map Delete) (Map.map Insert)
     where
       check m = if Map.null m then Nothing else Just m
 
