@@ -1,5 +1,5 @@
 name:                incremental
-version:             0.2
+version:             0.3
 synopsis:            incremental update library
 description:         Generic interface for incremental updates
 homepage:            https://github.com/fumieval/incremental#readme
@@ -10,7 +10,7 @@ maintainer:          fumiexcel@gmail.com
 copyright:           2020 Fumiaki Kinoshita
 category:            Data
 build-type:          Simple
-extra-source-files:  README.md
+extra-source-files:  README.md, CHANGELOG.md
 cabal-version:       >=1.10
 
 library
