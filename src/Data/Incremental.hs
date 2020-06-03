@@ -73,6 +73,7 @@ instance Incremental a => Incremental (Const a b) where
 data Alter a d = Insert a
   | Update d
   | Delete a -- ^ last value
+  | Delete_
   | Upsert a d
   deriving (Generic, Functor)
 
@@ -85,12 +86,15 @@ instance (J.ToJSON a, J.ToJSON d) => J.ToJSON (Alter a d)
 instance (Incremental a, d ~ Delta a, Semigroup d) => Semigroup (Alter a d) where
   _ <> Insert a = Insert a
   _ <> Delete a = Delete a
+  _ <> Delete_ = Delete_
   Insert a <> Update d = Insert (patch a d)
   Insert a <> Upsert _ d = Insert (patch a d)
   Update c <> Update d = Update (c <> d)
   Update c <> Upsert a d = Upsert a (c <> d)
   Delete a <> Update _ = Delete a
   Delete _ <> Upsert a _ = Insert a
+  Delete_ <> Update _ = Delete_
+  Delete_ <> Upsert a _ = Insert a
   Upsert a d <> Update e = Upsert (patch a e) (d <> e)
   Upsert a d <> Upsert _ e = Upsert a (d <> e)
 
