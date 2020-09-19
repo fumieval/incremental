@@ -17,6 +17,7 @@ module Data.Incremental (
   , Alter(..)
   , Hetero(..)
   , Fresh(..)
+  , WrapDelta(..)
 ) where
 
 import Control.Applicative
@@ -174,7 +175,7 @@ instance Eq a => Incremental [a] where
 
 newtype Hetero a = Hetero { getHetero :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
-      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData, J.FromJSON, J.ToJSON)
 
 -- | 'diff' checks equality
 instance Eq a => Incremental (Hetero a) where
@@ -186,7 +187,7 @@ instance Eq a => Incremental (Hetero a) where
 
 newtype Fresh a = Fresh { getFresh :: a }
   deriving (Bounded, Enum, Eq, Floating, Fractional, Integral, Semigroup
-      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData)
+      , Monoid, Num, Ord, Real, RealFrac, RealFloat, Generic, NFData, J.FromJSON, J.ToJSON)
 
 -- | Always updated
 instance Incremental (Fresh a) where
@@ -199,6 +200,15 @@ instance Incremental (Fresh a) where
   patch _ x = x; \
   diff a b = if a /= b then Just b else Nothing; \
   }
+
+-- | Wrap the result of 'diff'. Useful in combination with HKD
+newtype WrapDelta h x = WrapDelta {unwrapDelta :: Maybe (Delta (h x))}
+
+deriving instance Show (Delta (h x)) => Show (WrapDelta h x)
+deriving instance Eq (Delta (h x)) => Eq (WrapDelta h x)
+deriving instance Ord (Delta (h x)) => Ord (WrapDelta h x)
+deriving instance J.FromJSON (Delta (h x)) => J.FromJSON (WrapDelta h x)
+deriving instance J.ToJSON (Delta (h x)) => J.ToJSON (WrapDelta h x)
 
 TRIVIAL_EQ(Bool)
 TRIVIAL_EQ(Char)

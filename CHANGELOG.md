@@ -1,6 +1,8 @@
 incremental
 ====
 
+* Added `WrapDelta`
+
 0.3
 ----
 
