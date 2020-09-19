@@ -76,7 +76,7 @@ data Alter a d = Insert a
   | Delete a -- ^ last value
   | Delete_
   | Upsert a d
-  deriving (Generic, Functor)
+  deriving (Generic, Functor, Eq, Ord)
 
 deriving instance (Show a, Show d) => Show (Alter a d)
 instance (NFData a, NFData d) => NFData (Alter a d)

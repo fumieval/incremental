@@ -1,6 +1,7 @@
 incremental
 ====
 
+* Added `Eq`, `Ord` instances to `Alter`
 * Added `WrapDelta`
 
 0.3
